@@ -18,7 +18,7 @@ import javax.inject.Inject;
 
 public class HomerPlayerApplication extends MultiDexApplication {
 
-    private static final String AUDIOBOOKS_DIRECTORY = "AudioBooks";
+    private static final String AUDIOBOOKS_DIRECTORY = "Music";
 
     private ApplicationComponent component;
 

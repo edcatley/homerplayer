@@ -56,8 +56,8 @@ public class PlaybackService
     @Inject public EventBus eventBus;
 
     private Player player;
-    private DurationQuery durationQueryInProgress;
-    private AudioBookPlayback playbackInProgress;
+    public DurationQuery durationQueryInProgress;
+    public AudioBookPlayback playbackInProgress;
     private DeviceMotionDetector motionDetector;
     private Handler handler;
     private final SleepFadeOut sleepFadeOut = new SleepFadeOut();
@@ -142,7 +142,7 @@ public class PlaybackService
     }
 
     public AudioBook getAudioBookBeingPlayed() {
-        Preconditions.checkNotNull(playbackInProgress);
+        //Preconditions.checkNotNull(playbackInProgress);
         return playbackInProgress.audioBook;
     }
 
@@ -230,7 +230,7 @@ public class PlaybackService
         sleepFadeOut.reset();
     }
 
-    private class AudioBookPlayback implements PlaybackController.Observer {
+    public class AudioBookPlayback implements PlaybackController.Observer {
 
         final @NonNull AudioBook audioBook;
         private final @NonNull PlaybackController controller;
@@ -245,7 +245,7 @@ public class PlaybackService
 
         private final long UPDATE_TIME_MS = TimeUnit.SECONDS.toMillis(10);
 
-        private AudioBookPlayback(
+        public AudioBookPlayback(
                 @NonNull Player player,
                 @NonNull Handler handler,
                 @NonNull AudioBook audioBook,
@@ -309,6 +309,21 @@ public class PlaybackService
             }
         }
 
+
+        public void previousTrack() {
+            boolean hasMoreToPlay = audioBook.unadvanceFile();
+            CrashReporting.log(Log.DEBUG, TAG, "PlaybackService.AudioBookPlayback.onPlaybackEnded: " +
+                    (hasMoreToPlay ? "more to play" : "finished"));
+            if (hasMoreToPlay) {
+                AudioBook.Position position = audioBook.getLastPosition();
+                controller.start(position.file, position.seekPosition);
+            } else {
+//                audioBook.resetPosition();
+//                PlaybackService.this.onPlaybackEnded();
+//                controller.release();
+            }
+        }
+
         @Override
         public void onPlaybackStopped(long currentPositionMs) {
             audioBook.updatePosition(currentPositionMs);
@@ -326,9 +341,9 @@ public class PlaybackService
         }
     }
 
-    private class DurationQuery implements DurationQueryController.Observer {
+    public class DurationQuery implements DurationQueryController.Observer {
 
-        private final AudioBook audioBook;
+        public final AudioBook audioBook;
         private final DurationQueryController controller;
 
         private DurationQuery(Player player, AudioBook audioBook) {

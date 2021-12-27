@@ -105,6 +105,10 @@ public class AudioBook {
         notifyUpdateObserver();
     }
 
+    public String getFileName(){
+        return this.fileSet.files[lastPosition.fileIndex].getName();
+    }
+
     public void updateTotalPosition(long totalPositionMs) {
         Preconditions.checkArgument(totalPositionMs <= totalDuration);
 
@@ -147,6 +151,17 @@ public class AudioBook {
         return hasMoreFiles;
     }
 
+    public boolean unadvanceFile() {
+        DebugUtil.verifyIsOnMainThread();
+        int newIndex = lastPosition.fileIndex - 1;
+        boolean hasMoreFiles = newIndex >= 0;
+        if (hasMoreFiles) {
+            lastPosition = new Position(newIndex, 0);
+            notifyUpdateObserver();
+        }
+
+        return hasMoreFiles;
+    }
     List<Long> getFileDurations() {
         return fileDurations;
     }

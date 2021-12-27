@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name" translatable="false">Homer Player</string>
+    <string name="app_name" translatable="false">Ed Player</string>
     <string name="demo_samples_service_notification_download">Downloading sample audiobooks</string>
     <string name="demo_samples_service_notification_install">Installing sample audiobooks</string>
-    <string name="playback_service_notification">Audiobook playing</string>
-    <string name="noBooksMessage">There are no audio books on the device.</string>
-    <string name="copyBooksInstructionMessage">Copy audio books to folder &lt;b>/%s&lt;/b></string>
-    <string name="device_admin_label" translatable="false">Homer Player</string>
-    <string name="device_admin_description" translatable="false">Homer Player</string>
+    <string name="playback_service_notification">Music playing</string>
+    <string name="noBooksMessage">There is no music on the device.</string>
+    <string name="copyBooksInstructionMessage">Copy music to folder &lt;b>/%s&lt;/b></string>
+    <string name="device_admin_label" translatable="false">Ed Player</string>
+    <string name="device_admin_description" translatable="false">Ed Player</string>
     <string name="hint_browsing">Swipe\nto browse titles</string>
     <string name="hint_settings">Tap 5x\nfor settings</string>
     <string name="hint_flip_to_stop">Put the device with screen down to stop</string>
@@ -77,4 +77,5 @@
     <string name="samplesDownloadErrorMessage">Download and installation failed.</string>
     <string name="samplesDownloadProgressTitle">Downloading…</string>
     <string name="samplesDownloadNotificationTitle">Audiobook samples for Homer Player</string>
+    <string name="button_acc_skip">skip</string>
 </resources>

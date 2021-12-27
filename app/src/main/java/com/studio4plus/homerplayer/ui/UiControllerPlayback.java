@@ -27,6 +27,15 @@ public class UiControllerPlayback {
 
     private static final String TAG = "UiControllerPlayback";
 
+    public void skip(boolean isFF) {
+        if (isFF){
+            playbackService.playbackInProgress.onPlaybackEnded();
+    }
+        else{
+            playbackService.playbackInProgress.previousTrack();
+        }
+    }
+
     static class Factory {
         private final @NonNull EventBus eventBus;
         private final @NonNull AnalyticsTracker analyticsTracker;
@@ -52,7 +61,7 @@ public class UiControllerPlayback {
     private final @NonNull AnalyticsTracker analyticsTracker;
     private final @NonNull Handler mainHandler;
     private final @NonNull AudioManager audioManager;
-    private final @NonNull PlaybackService playbackService;
+    public final @NonNull PlaybackService playbackService;
     private final @NonNull PlaybackUi ui;
 
     // Non-null only when rewinding.
@@ -129,6 +138,9 @@ public class UiControllerPlayback {
                 isForward,
                 timerObserver);
         ffRewindController.start();
+    }
+    public String getTrackTitle(){
+        return playbackService.getAudioBookBeingPlayed().getTitle();
     }
 
     public void stopRewind() {

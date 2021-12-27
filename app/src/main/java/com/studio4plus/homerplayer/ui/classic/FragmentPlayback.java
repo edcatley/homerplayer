@@ -45,11 +45,16 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
     private Button stopButton;
     private ImageButton rewindButton;
     private ImageButton ffButton;
+    private ImageButton skipButton;
+    private ImageButton previousButton;
     private TextView elapsedTimeView;
+    private TextView trackTitleView;
     private TextView elapsedTimeRewindFFView;
+    private TextView nextTrackTitleView;
     private VolumeIndicatorShowController volumeIndicatorShowController;
     private VolumeChangeIndicator volumeIndicator;
     private RewindFFHandler rewindFFHandler;
+    private SkipHandler skipHandler;
     private Animator elapsedTimeRewindFFViewAnimation;
 
     private @Nullable UiControllerPlayback controller;
@@ -72,8 +77,9 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
         });
 
         elapsedTimeView = view.findViewById(R.id.elapsedTime);
+        trackTitleView = view.findViewById(R.id.trackTitle);
         elapsedTimeRewindFFView = view.findViewById(R.id.elapsedTimeRewindFF);
-
+        nextTrackTitleView = view.findViewById(R.id.nextTrackTitle);
         elapsedTimeView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(
@@ -113,10 +119,14 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
 
         rewindButton = view.findViewById(R.id.rewindButton);
         ffButton = view.findViewById(R.id.fastForwardButton);
-
+        skipButton = view.findViewById(R.id.skipButton);
+        previousButton = view.findViewById(R.id.previousButton);
         View rewindFFOverlay = view.findViewById(R.id.rewindFFOverlay);
+        View skipOverlay = view.findViewById(R.id.skipOverlay);
         rewindFFHandler = new RewindFFHandler(
                 (View) rewindFFOverlay.getParent(), rewindFFOverlay);
+        skipHandler = new SkipHandler(
+                (View) skipOverlay.getParent(), skipOverlay);
         rewindButton.setEnabled(false);
         ffButton.setEnabled(false);
         rewindFFOverlay.setOnTouchListener(capturingListener);
@@ -135,6 +145,9 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
         CrashReporting.log("UI: FragmentPlayback resumed");
         rewindButton.setOnTouchListener(new PressReleaseDetector(rewindFFHandler));
         ffButton.setOnTouchListener(new PressReleaseDetector(rewindFFHandler));
+        skipButton.setOnTouchListener(new PressReleaseDetector(skipHandler));
+        previousButton.setOnTouchListener(new PressReleaseDetector(skipHandler));
+
         showHintIfNecessary();
     }
 
@@ -164,14 +177,16 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
     }
 
     void enableUiOnStart() {
-        rewindButton.setEnabled(true);
-        ffButton.setEnabled(true);
+        //rewindButton.setEnabled(true);
+        //ffButton.setEnabled(true);
     }
 
     private void disableUiOnStopping() {
         rewindButton.setEnabled(false);
         stopButton.setEnabled(false);
         ffButton.setEnabled(false);
+        skipButton.setEnabled(false);
+        previousButton.setEnabled(false);
     }
 
     private boolean volumeUp(@NonNull View ignored) {
@@ -263,7 +278,11 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
 
     @Override
     public void onTimerUpdated(long displayTimeMs) {
-        elapsedTimeView.setText(elapsedTime(displayTimeMs));
+        //elapsedTimeView.setText(elapsedTime(displayTimeMs));
+        String trimmed = controller.playbackService.getAudioBookBeingPlayed().getFileName().substring(0, controller.playbackService.getAudioBookBeingPlayed().getFileName().lastIndexOf('.'));
+        trackTitleView.setText(trimmed);
+
+
         elapsedTimeRewindFFView.setText(elapsedTime(displayTimeMs));
     }
 
@@ -273,6 +292,149 @@ public class FragmentPlayback extends Fragment implements FFRewindTimer.Observer
             elapsedTimeRewindFFViewAnimation.start();
         }
     }
+    private class SkipHandler implements PressReleaseDetector.Listener {
+
+
+        private final View commonParent;
+        private final View skipOverlay;
+        private Animator currentAnimator;
+        private boolean isRunning;
+
+
+        private SkipHandler(@NonNull View commonParent, @NonNull View skipOverlay) {
+            this.commonParent = commonParent;
+            this.skipOverlay = skipOverlay;
+        }
+
+
+
+        @Override
+        public void onPressed(final View v, float x, float y) {
+            Preconditions.checkNotNull(controller);
+            if (currentAnimator != null) {
+                currentAnimator.cancel();
+            }
+
+            final boolean isFF = (v == skipButton);
+            skipOverlay.setVisibility(View.VISIBLE);
+            currentAnimator = createAnimation(v, x, y, true);
+            currentAnimator.addListener(new AnimatorListener() {
+                @Override
+                protected void onAnimationCompleted() {
+                   // controller.startRewind(isFF, FragmentPlayback.this);
+                    controller.skip(isFF);
+                    try {
+                        String trimmed = controller.playbackService.getAudioBookBeingPlayed().getFileName().substring(0, controller.playbackService.getAudioBookBeingPlayed().getFileName().lastIndexOf('.'));
+                        nextTrackTitleView.setText(trimmed);
+                    }
+                catch(Exception e){
+
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animator) {
+                    super.onAnimationCancel(animator);
+                    resumeFromRewind();
+                }
+
+                @Override
+                protected void onCompletedOrCancelled() {
+                    currentAnimator = null;
+                }
+            });
+            currentAnimator.start();
+
+            //controller.pauseForRewind();
+            isRunning = true;
+        }
+
+        @Override
+        public void onReleased(View v, float x, float y) {
+            nextTrackTitleView.setText("");
+            if (currentAnimator != null) {
+                currentAnimator.cancel();
+                skipOverlay.setVisibility(View.GONE);
+                currentAnimator = null;
+            } else {
+                currentAnimator = createAnimation(v, x, y, false);
+                currentAnimator.addListener(new AnimatorListener() {
+                    @Override
+                    protected void onCompletedOrCancelled() {
+                        skipOverlay.setVisibility(View.GONE);
+                        currentAnimator = null;
+                    }
+                });
+                currentAnimator.start();
+                //resumeFromRewind();
+            }
+        }
+
+        void onPause() {
+            if (currentAnimator != null) {
+                // Cancelling the animation calls resumeFromRewind.
+                currentAnimator.cancel();
+                currentAnimator = null;
+            }
+//            else if (isRunning) {
+//                resumeFromRewind();
+//            }
+        }
+
+        void onStopping() {
+//            if (isRunning)
+//                stopRewind();
+        }
+
+        private void resumeFromRewind() {
+//            Preconditions.checkNotNull(controller);
+//            stopRewind();
+//            controller.resumeFromRewind();
+        }
+
+        private void stopRewind() {
+//            Preconditions.checkNotNull(controller);
+//            controller.stopRewind();
+//            isRunning = false;
+        }
+
+        private Animator createAnimation(View v, float x, float y, boolean reveal) {
+            Rect viewRect = ViewUtils.getRelativeRect(commonParent, v);
+            float startX = viewRect.left + x;
+            float startY = viewRect.top + y;
+
+            // Compute final radius
+            float dx = Math.max(startX, commonParent.getWidth() - startX);
+            float dy = Math.max(startY, commonParent.getHeight() - startY);
+            float finalRadius = (float) Math.hypot(dx, dy);
+
+            float initialRadius = reveal ? 0f : finalRadius;
+            if (!reveal)
+                finalRadius = 0f;
+
+            final int durationResId = reveal
+                    ? R.integer.ff_rewind_overlay_show_animation_time_ms
+                    : R.integer.ff_rewind_overlay_hide_animation_time_ms;
+            Animator animator = ViewAnimationUtils.createCircularReveal(
+                    skipOverlay, Math.round(startX), Math.round(startY), initialRadius, finalRadius);
+            animator.setDuration(getResources().getInteger(durationResId));
+            animator.setInterpolator(new AccelerateDecelerateInterpolator());
+
+            return animator;
+        }
+
+
+//        @Override
+//        public void onPressed(final View v, float x, float y) {
+////            Preconditions.checkNotNull(controller);
+////            controller.pauseForRewind();
+//             controller.skip();
+//        }
+//
+//        @Override
+//        public void onReleased(View v, float x, float y) {
+
+        }
 
     void setController(@NonNull UiControllerPlayback controller) {
         this.controller = controller;
